@@ -3,24 +3,36 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
+
 
 namespace ServerCore
 {
-    class Listener
+    public class Listener
     {
         Socket _listenerSocket;
-        Action<Socket> _onAcceptHandler;
-        public void Init(IPEndPoint endPoint, Action<Socket> onAcceptHandler)
+        Func<Session> _sessionFactory;
+        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory)
         {
+            Thread cur_thread = Thread.CurrentThread;
+            Console.WriteLine("MAIN = {0}", cur_thread.ManagedThreadId);
+            int workerThreads;
+            int portThreads;
+
+            ThreadPool.GetMaxThreads(out workerThreads, out portThreads);
+            Console.WriteLine("\nMaximum worker threads: \t{0}" +
+                "\nMaximum completion port threads: {1}",
+                workerThreads, portThreads);
+
             //문지기 핸드폰 기본 설정(통신방법설정) 하나의 휴대폰
             _listenerSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            _onAcceptHandler += onAcceptHandler;
+            _sessionFactory += sessionFactory;
             //핸드폰 번호 설정(할당)
             _listenerSocket.Bind(endPoint);
 
             //영업 시작
-            //backlog : 최대 대기수 = 바깥 의자수
-            _listenerSocket.Listen(10);
+            //backlog : 최대 대기수 = 바깥 의자수  나머지는 그냥 연결 자체를 끊어버림
+            _listenerSocket.Listen(50);
 
             //비동기 작업을 적는 메모장과 같음
             SocketAsyncEventArgs args = new SocketAsyncEventArgs();
@@ -43,11 +55,15 @@ namespace ServerCore
         {
             if (args.SocketError == SocketError.Success)
             {
-                _onAcceptHandler.Invoke(args.AcceptSocket);
+                Thread cur_thread = Thread.CurrentThread;
+                Console.WriteLine("=====thread = {0}", cur_thread.ManagedThreadId);
+                Session session = _sessionFactory.Invoke();
+                session.Start(args.AcceptSocket);
+                session.OnConnected(args.AcceptSocket.RemoteEndPoint);
             }
             else
                 Console.WriteLine(args.SocketError.ToString());
-
+            Console.WriteLine("re throw");
             RegisterAccept(args);
         }
     }
