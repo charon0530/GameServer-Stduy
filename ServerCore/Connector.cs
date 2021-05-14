@@ -3,23 +3,28 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace ServerCore
 {
     public class Connector
     {
         Func<Session> _sessionFactory;
-        public void Connect(IPEndPoint endPoint, Func<Session> sessionFactory)
+        public void Connect(IPEndPoint endPoint, Func<Session> sessionFactory, int count = 1)
         {
-            Socket socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            _sessionFactory = sessionFactory;
+            for (int i =0; i< count; i++)
+            {
+                Socket socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                _sessionFactory = sessionFactory;
 
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-            args.Completed += new EventHandler<SocketAsyncEventArgs>(OnConnectCompleted);
-            args.RemoteEndPoint = endPoint;
-            args.UserToken = socket;
+                SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                args.Completed += new EventHandler<SocketAsyncEventArgs>(OnConnectCompleted);
+                args.RemoteEndPoint = endPoint;
+                args.UserToken = socket;
 
-            RegisterConnect(args);
+                RegisterConnect(args);
+                Thread.Sleep(1);
+            }
         }
 
         void RegisterConnect(SocketAsyncEventArgs args)

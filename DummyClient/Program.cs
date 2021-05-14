@@ -17,15 +17,11 @@ namespace DummyClient
             IPAddress ipAddr = ipHost.AddressList[0];
             IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
 
-           // for(int i = 0; i<500; i++)
-            {
+            
             Connector connector = new Connector();
-            connector.Connect(endPoint, () => { return new ServerSession(); });
-
-            }
+            connector.Connect(endPoint, () => { return SessionManager.Instance.Generate(); },500);
 
             
-
 
 
             while (true)
@@ -33,14 +29,14 @@ namespace DummyClient
 
                 try
                 {
-                   
+                    SessionManager.Instance.SendForEach();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
                 }
 
-                Thread.Sleep(100);
+                Thread.Sleep(250);
 
             }
         }
